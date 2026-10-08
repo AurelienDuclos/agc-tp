@@ -35,6 +35,7 @@ __maintainer__ = "Your Name"
 __email__ = "your@email.fr"
 __status__ = "Developpement"
 
+MATCH_FILE = Path(__file__).resolve().parent / "MATCH"
 
 
 def isfile(path: str) -> Path:  # pragma: no cover
@@ -129,7 +130,18 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     :param kmer_size: (int) A fournir mais non utilise cette annee
     :return: (list) A list of all the [OTU (str), count (int)] .
     """
-    pass
+    otu_list = []
+    for seq, count in dereplication_fulllength(amplicon_file, minseqlen, mincount):
+        is_otu = True
+        for otu_seq, _ in otu_list:
+            alignment = nw.global_align(seq, otu_seq, gap_open=-1, gap_extend=-1,
+                                        matrix=str(MATCH_FILE))
+            if get_identity(alignment) > 97:
+                is_otu = False
+                break
+        if is_otu:
+            otu_list.append([seq, count])
+    return otu_list
 
 
 def write_OTU(OTU_list: List, output_file: Path) -> None:
@@ -138,7 +150,10 @@ def write_OTU(OTU_list: List, output_file: Path) -> None:
     :param OTU_list: (list) A list of OTU sequences
     :param output_file: (Path) Path to the output file
     """
-    pass
+    with open(output_file, "w") as filout:
+        for i, (seq, count) in enumerate(OTU_list, start=1):
+            filout.write(f">OTU_{i} occurrence:{count}\n")
+            filout.write(textwrap.fill(seq, width=80) + "\n")
 
 
 #==============================================================
